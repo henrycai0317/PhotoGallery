@@ -52,9 +52,4 @@ class FlickrFetchr {
         return responseLiveData
     }
 
-    fun cancelRequestInFlight(){
-        if(flickrApi.fetchPhotos().isCanceled){
-            flickrApi.fetchPhotos().cancel()
-        }
-    }
 }
