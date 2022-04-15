@@ -10,4 +10,9 @@ class PhotoGalleryViewModel:ViewModel(){
     init {
         galleryItemLiveData = FlickrFetchr().fetchPhotos()
     }
+
+    override fun onCleared() {
+        super.onCleared()
+        FlickrFetchr().cancelRequestInFlight()
+    }
 }
