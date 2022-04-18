@@ -56,6 +56,10 @@ dependencies {
     //Add Glide
     implementation 'com.github.bumptech.glide:glide:4.11.0'
     implementation 'com.github.bumptech.glide:compiler:4.11.0'
+    //Add androidx.preference.PreferenceManager
+    implementation 'androidx.preference:preference:1.1.1'
+    //Add Android KTX
+    implementation 'androidx.core:core-ktx:1.7.0'
 
 
 }

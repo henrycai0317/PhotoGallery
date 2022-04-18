@@ -1,14 +1,14 @@
 package com.example.photogallery
 
+import android.app.AlertDialog
 import android.content.Context
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.util.Log
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
+import android.view.*
 import android.widget.ImageView
+import android.widget.SearchView
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
@@ -31,12 +31,22 @@ class PhotoGalleryFragment: Fragment() {
 
     private lateinit var photoGalleryViewModel: PhotoGalleryViewModel
     private lateinit var photoRecyclerView:RecyclerView
+    private lateinit var alertDialog: AlertDialog
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        loadingDialog()
+        setHasOptionsMenu(true)
 
       photoGalleryViewModel =
           ViewModelProvider(this).get(PhotoGalleryViewModel::class.java)
+    }
+
+    private fun loadingDialog() {
+        alertDialog = AlertDialog.Builder(requireContext())
+            .setTitle("Downloading photos")
+            .setMessage("It might take a few seconds..")
+            .show()
     }
 
     override fun onCreateView(
@@ -57,8 +67,58 @@ class PhotoGalleryFragment: Fragment() {
             viewLifecycleOwner,
             Observer { galleryItems ->
                photoRecyclerView.adapter = PhotoAdapter(galleryItems)
+                alertDialog.dismiss()
             }
         )
+    }
+    //Add Menu
+    override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
+        inflater.inflate(R.menu.fragment_photo_gallery,menu)
+
+        val searchItem : MenuItem = menu.findItem(R.id.menu_item_search)
+        val searchView = searchItem.actionView as SearchView
+
+        searchView.apply {
+            setOnQueryTextListener(object : SearchView.OnQueryTextListener{
+                override fun onQueryTextSubmit(queryText: String): Boolean {
+                    Log.d(TAG, "onQueryTextSubmit: $queryText")
+                    photoGalleryViewModel.fetchPhotos(queryText)
+                    clearFocus()
+                    loadingDialog()
+                    return true
+                }
+
+                override fun onQueryTextChange(queryText: String?): Boolean {
+                    Log.d(TAG, "onQueryTextChange: $queryText")
+                    return false
+                }
+            })
+            //Add Search History Key Word
+            setOnSearchClickListener {
+                searchView.setQuery(photoGalleryViewModel.searchTerm,false)
+            }
+
+            setOnFocusChangeListener { view, hasFocus ->
+                if(!hasFocus){
+                    searchItem.collapseActionView()
+                    clearFocus()
+                }
+            }
+
+        }
+
+
+    }
+
+    //Menu selected
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when(item.itemId) {
+            R.id.menu_item_clear -> {
+                photoGalleryViewModel.fetchPhotos("")
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
+        }
     }
 
     private class PhotoHolder(private val itemImageView : ImageView) : RecyclerView.ViewHolder(itemImageView){
