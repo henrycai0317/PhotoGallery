@@ -1,6 +1,5 @@
-package com.example.photogallery
+package com.example.photogallery.ui
 
-import android.app.AlertDialog
 import android.content.Context
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
@@ -9,45 +8,38 @@ import android.util.Log
 import android.view.*
 import android.widget.ImageView
 import android.widget.SearchView
-import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.*
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.work.*
 import com.bumptech.glide.Glide
-import com.example.photogallery.connect.FlickrApi
-import com.example.photogallery.connect.FlickrFetchr
+import com.example.photogallery.R
 import com.example.photogallery.data.GalleryItem
 import com.example.photogallery.data.PhotoGalleryViewModel
-import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
-import retrofit2.Retrofit
-import retrofit2.converter.scalars.ScalarsConverterFactory
+import com.example.photogallery.sharePreference.QueryPreferences
+import com.example.photogallery.workManager.PollWorker
+import java.util.concurrent.TimeUnit
 
 private const val TAG = "PhotoGalleryFragment"
+private const val POLL_WORK = "POLL_WORK"
 class PhotoGalleryFragment: Fragment() {
 
     private lateinit var photoGalleryViewModel: PhotoGalleryViewModel
     private lateinit var photoRecyclerView:RecyclerView
-    private lateinit var alertDialog: AlertDialog
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        loadingDialog()
         setHasOptionsMenu(true)
 
       photoGalleryViewModel =
           ViewModelProvider(this).get(PhotoGalleryViewModel::class.java)
+
+
     }
 
-    private fun loadingDialog() {
-        alertDialog = AlertDialog.Builder(requireContext())
-            .setTitle("Downloading photos")
-            .setMessage("It might take a few seconds..")
-            .show()
-    }
+
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -67,7 +59,6 @@ class PhotoGalleryFragment: Fragment() {
             viewLifecycleOwner,
             Observer { galleryItems ->
                photoRecyclerView.adapter = PhotoAdapter(galleryItems)
-                alertDialog.dismiss()
             }
         )
     }
@@ -84,7 +75,6 @@ class PhotoGalleryFragment: Fragment() {
                     Log.d(TAG, "onQueryTextSubmit: $queryText")
                     photoGalleryViewModel.fetchPhotos(queryText)
                     clearFocus()
-                    loadingDialog()
                     return true
                 }
 
@@ -107,6 +97,15 @@ class PhotoGalleryFragment: Fragment() {
 
         }
 
+        val toggleItem = menu.findItem(R.id.menu_item_toggle_polling)
+        val isPolling = QueryPreferences.isPolling(requireContext())
+        val toggleItemTitle = if(isPolling){
+            R.string.stop_polling
+        }else{
+            R.string.start_polling
+        }
+        toggleItem.setTitle(toggleItemTitle)
+
 
     }
 
@@ -116,6 +115,29 @@ class PhotoGalleryFragment: Fragment() {
             R.id.menu_item_clear -> {
                 photoGalleryViewModel.fetchPhotos("")
                 true
+            }
+            R.id.menu_item_toggle_polling -> {
+                val isPolling = QueryPreferences.isPolling(requireContext())
+                if (isPolling){
+                    WorkManager.getInstance(requireContext()).cancelUniqueWork(POLL_WORK)
+                    QueryPreferences.setPolling(requireContext(),false)
+                }else{
+                    val constraints = Constraints.Builder()
+                        .setRequiredNetworkType(NetworkType.UNMETERED)
+                        .build()
+                    val periodicRequest =
+                        PeriodicWorkRequestBuilder<PollWorker>(15,TimeUnit.MINUTES)
+                        .setConstraints(constraints)
+                        .build()
+                    WorkManager.getInstance(requireContext()).enqueueUniquePeriodicWork(POLL_WORK,
+                        ExistingPeriodicWorkPolicy.KEEP,
+                        periodicRequest)
+                    QueryPreferences.setPolling(requireContext(),true)
+
+                }
+                //invalidateOptionsMenu()用來表示Android，選單內容已更改
+                activity?.invalidateOptionsMenu()
+                return true
             }
             else -> super.onOptionsItemSelected(item)
         }

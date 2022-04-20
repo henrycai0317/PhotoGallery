@@ -60,6 +60,7 @@ dependencies {
     implementation 'androidx.preference:preference:1.1.1'
     //Add Android KTX
     implementation 'androidx.core:core-ktx:1.7.0'
-
+    //Add WorkManager
+    implementation 'androidx.work:work-runtime-ktx:2.7.1'
 
 }
