@@ -1,6 +1,7 @@
 package com.example.photogallery.ui
 
 import android.content.Context
+import android.content.Intent
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import android.os.Bundle
@@ -143,12 +144,29 @@ class PhotoGalleryFragment: VisibleFragment() {
         }
     }
 
-    private class PhotoHolder(private val itemImageView : ImageView) : RecyclerView.ViewHolder(itemImageView){
+    private inner class PhotoHolder(private val itemImageView : ImageView)
+        : RecyclerView.ViewHolder(itemImageView),View.OnClickListener{
+
+        private lateinit var galleryItem: GalleryItem
+
+        init {
+            itemView.setOnClickListener(this)
+        }
+
         fun bindDrawable (context: Context,url:String,placeHolde:Drawable){
             Glide.with(context)
                 .load(url)
                 .placeholder(placeHolde)
                 .into(itemImageView);
+        }
+
+        fun bindGalleryItem(item : GalleryItem){
+            galleryItem = item
+        }
+
+        override fun onClick(p0: View?) {
+            val intent = PhotoPageActivity.newIntent(requireContext(),galleryItem.photoPageUri)
+            startActivity(intent)
         }
     }
 
@@ -161,6 +179,7 @@ class PhotoGalleryFragment: VisibleFragment() {
 
         override fun onBindViewHolder(holder: PhotoHolder, position: Int) {
             val galleryItem = galleryItems[position]
+            holder.bindGalleryItem(galleryItem)
             val placeholder:Drawable = ContextCompat.getDrawable(
                 requireContext(),
                 R.drawable.x_space_launch
